@@ -7,7 +7,48 @@ import { ReviewRequest, ReviewResults, GeminiResponse } from '../types';
 
 const router = express.Router();
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyC_Jh1D_2MZrrhdujVDzhSDiB8-sWhY49Y';
+
+// Test which model works
+const testModels = async () => {
+  console.log('\n🔍 Testing Gemini Models...\n');
+  
+  const models = [
+    'gemini-1.5-flash',
+    'gemini-1.5-pro', 
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-exp',
+    'gemini-2.5-flash'
+  ];
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+      
+      await axios.post(url, {
+        contents: [{ parts: [{ text: 'Hello' }] }]
+      }, { timeout: 5000 });
+      
+      console.log(`✅ ${model} - WORKS!`);
+      return model; // Return first working model
+    } catch (error: any) {
+      console.log(`❌ ${model} - ${error.response?.data?.error?.message || 'Failed'}`);
+    }
+  }
+  
+  return null;
+};
+
+// Call test on startup
+testModels().then(workingModel => {
+  if (workingModel) {
+    console.log(`\n🎉 Using model: ${workingModel}\n`);
+  } else {
+    console.log('\n❌ No working model found!\n');
+  }
+});
+
+// Use the working model
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 // Generate hash for caching
@@ -34,10 +75,8 @@ router.post('/review', async (req: Request, res: Response) => {
     });
 
     if (cachedReview) {
-      // Increment cache hit count
       await ReviewCache.updateOne({ codeHash }, { $inc: { hitCount: 1 } });
 
-      // Save to user's history
       const review = new Review({
         sessionId,
         code,
@@ -130,7 +169,7 @@ Return ONLY valid JSON, no markdown formatting.`;
       language,
       reviewResults,
       createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     });
     await cache.save();
 
@@ -153,7 +192,7 @@ Return ONLY valid JSON, no markdown formatting.`;
     });
 
   } catch (error: any) {
-    console.error('Review error:', error.response?.data || error.message);
+    console.error('❌ Review error:', error.response?.data || error.message);
     res.status(500).json({
       error: 'Failed to analyze code',
       details: error.response?.data?.error?.message || error.message
@@ -161,7 +200,7 @@ Return ONLY valid JSON, no markdown formatting.`;
   }
 });
 
-// GET /api/reviews/:sessionId - Get user's review history
+// GET /api/reviews/:sessionId
 router.get('/reviews/:sessionId', async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
@@ -176,7 +215,7 @@ router.get('/reviews/:sessionId', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/review/:id - Get specific review
+// GET /api/review/:id
 router.get('/review/:id', async (req: Request, res: Response) => {
   try {
     const review = await Review.findById(req.params.id);
@@ -189,7 +228,7 @@ router.get('/review/:id', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/stats - Get platform statistics
+// GET /api/stats
 router.get('/stats', async (req: Request, res: Response) => {
   try {
     const totalReviews = await Review.countDocuments();
