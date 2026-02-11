@@ -43,8 +43,6 @@ Before starting, make sure you have:
 
 - **Node.js** v16 or higher installed  
 - **MongoDB** installed and running  
-- **Gemini API Key** from [Google AI Studio](https://aistudio.google.com/app/apikey)  
-
 ---
 
 ## 📦 Installation
