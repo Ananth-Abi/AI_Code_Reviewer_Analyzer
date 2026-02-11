@@ -7,7 +7,7 @@ import { ReviewRequest, ReviewResults, GeminiResponse } from '../types';
 
 const router = express.Router();
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyC_Jh1D_2MZrrhdujVDzhSDiB8-sWhY49Y';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // Test which model works
 const testModels = async () => {
